@@ -60,7 +60,7 @@ def book(date, time_, day_start=7, courts=(1, 2), wait=1, pay=False):
     )
 
     # Attempt to add a court to the basket
-    added_to_basket, table_index = True, 1 + (time_ - day_start)
+    added_to_basket, table_index = False, 1 + (time_ - day_start)
     for court in list(courts):
         if _add_to_basket(driver, table_index, court, time=time_string, wait=wait):
             added_to_basket = True
