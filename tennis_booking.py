@@ -54,7 +54,7 @@ TEXT_MESSAGE_ACCOUNT_AUTH_TOKEN = ''
 # TEXT_MESSAGE_CLIENT = Client(TEXT_MESSAGE_ACCOUNT_ID, TEXT_MESSAGE_ACCOUNT_AUTH_TOKEN)
 
 AUTH = load_file("auth.json", io_type="os", prefix=os.path.join(os.path.dirname(__file__), ".secrets"))
-EMAILS = load_file("TEST.emails.json", io_type="os", prefix=os.path.join(os.path.dirname(__file__), ".secrets"))
+EMAILS = load_file("emails.json", io_type="os", prefix=os.path.join(os.path.dirname(__file__), ".secrets"))
 
 
 EMAIL_SENDER = AUTH["emails"]["address"]
@@ -70,7 +70,7 @@ def send_email(booking_msg, body, recipients):
         # yag.send(recipients, booking_msg, [body])
         yag.send(bcc=recipients, subject=booking_msg, contents=body)
         logger.info("Email sent successfully")
-    except Exception as ex:
+    except Exception as _:
         logger.error("Email send error", exc_info=True)
 
 

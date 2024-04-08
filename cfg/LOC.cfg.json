@@ -7,7 +7,7 @@
     "sleep": 10,
     "reload_frequency": 100
   },
-  "cache_file": "TEST.cache.json",
+  "cache_file": "LOC.cache.json",
   "runtime_args": {
     "wait_time": 60,
     "email": true,
