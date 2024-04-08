@@ -5,7 +5,7 @@
 Clone this repository into a directory on your local machine
 
 ```
-$ git clone https://github.com/ads91/tennis-booking.git
+$ git clone https://github.com/ads91/tower-hamlets-tennis-court-watcher.git
 ```
 
 Ensure to have Python installed on your machine and install the dependencies defined in requirements.txt
