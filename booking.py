@@ -1,41 +1,59 @@
+import logging
+import selenium
 import datetime
 
 from bs4 import BeautifulSoup
+from main import *
 from utils.utils import get_chrome_driver, extract_site_contents
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 
-def book(date, time):
-    # content = """
-        # <input type="checkbox" class="bookable" name="courts[]" value="255_167_2024-04-09_15:00" data-price="4" data-concession="4">
-        # <input type="checkbox" class="bookable" name="courts[]" value="255_168_2024-04-09_16:00" data-price="6" data-concession="6">
-        # <input type="checkbox" class="bookable" name="courts[]" value="255_169_2024-04-09_17:00" data-price="8" data-concession="8">
-    # """
-    # Format time for look-up
-    time_string = str(time) + ":00"
+logger = logging.getLogger(__name__)
+
+
+def _add_to_basket(driver, table_index, court, time, wait=5):
+    logger.info(f"Attempting to add court {court} at {time} to the basket")
+
+    selector = f"#book > div.availability > form > table > tbody > tr:nth-child({table_index}) > td > label:nth-child({court}) > span.button.available"
+    try:
+        button = WebDriverWait(driver, wait).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
+        button.click()
+        logger.info(f"Added court {court} at {time} to the basket")
+        return True
+    except selenium.common.exceptions.TimeoutException as _:
+        logger.debug("Slot not available")
+    except Exception as _:
+        logger.critical("Unknown exception occurred", exc_info=True)
+
+    return False
+
+
+def book(date, time, day_start=7, courts=(1, 2)):
+    logger.info(f"Checking for available slots on {date} at {time}")
+
+    time_string = str(time).zfill(2) + ":00"
 
     # Spin up driver
     driver = get_chrome_driver(
-        url="https://tennistowerhamlets.com/book/courts/st-johns-park/2024-04-09#book",
+        url=BOOKING_WIDGET_URL.format(date=date.strftime(BOOKING_WIDGET_URL_DATE_FORMAT)),
         driver_path="",
         sleep=1
     )
 
-    # Extract HTML
-    content = extract_site_contents(
-        chrome_driver=driver, sleep=1
-    )
+    # Attempt to add a court to the basket
+    table_index = 1 + (time - day_start)
+    for court in list(courts):
+        if _add_to_basket(driver, table_index, court, time=time_string, wait=5):
+            break
 
-    # Search the HTML for a unique identifier we'd associate with an available slot
-    lookup = date.strftime("%Y-%m-%d") + "_" + time_string
+    # Navigate to the basket
+    selector_basket = "# menu-basket > img"
+    button = WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector_basket)))
+    button.click()
 
-    # Use a CSS selector to find elements containing the substring in the value attribute
-    selected_elements = content.select('input[value*="{}"]'.format(lookup))
-
-    # Add the slot to the cart
-    for element in selected_elements:
-        # Get the button (from the parent element) and click it
-        button = element.parent.find(name="span", attrs={"class": "button available"})
-        button.click()
+    print("")
 
 
 if __name__ == "__main__":
