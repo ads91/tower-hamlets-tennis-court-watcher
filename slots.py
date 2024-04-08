@@ -87,10 +87,11 @@ def get_email_frame(rows, date, url):
     df = pd.DataFrame(rows)
 
     if not df.empty:
-        df = df.drop("status", axis=1)
+        df = df.drop(["status", "court"], axis=1)
         df["date"] = date.strftime("%a %d %b %Y")
         df["url"], df["time"] = url, df["time"].astype(str).str.zfill(2) + ":00"
-        df = df[["date", "time", "court", "url"]]
+        df = df[["date", "time", "url"]]
+        df = df.drop_duplicates()
         df.columns = [string[0].upper() + string[1:] for string in df.columns]
-    
+
     return df
