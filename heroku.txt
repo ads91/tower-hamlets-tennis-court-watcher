@@ -1,0 +1,8 @@
+https://stackoverflow.com/questions/32815483/heroku-how-do-you-push-to-specific-app-if-you-have-multiple-apps-in-heroku
+
+git remote add uk-tennis-booking https://git.heroku.com/uk-tennis-booking.git
+
+heroku dyno:restart worker --app "uk-tennis-booking"
+
+heroku buildpacks:add --index 1 https://github.com/heroku/heroku-buildpack-chromedriver.git --app "uk-tennis-booking"
+heroku buildpacks:add --index 1 https://github.com/heroku/heroku-buildpack-google-chrome.git --app "uk-tennis-booking"
