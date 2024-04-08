@@ -1,4 +1,4 @@
-# /usr/local/bin/python3.8 ~/Documents/dev/other/tennis_booking.py
+# /usr/local/bin/python3.8 ~/Documents/dev/other/main.py
 import os
 import time
 import logging

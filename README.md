@@ -58,7 +58,7 @@ Those emails in the "sys_errors" entry will recieve emails if/when the notificat
 Navigate to the cloned repository (i.e. the directory this readme.md resides in) and run the application (it will run indefinitely)
 
 ```
-$ python tennis_booking.py
+$ python main.py
 ```
 
 ## Advanced setup
