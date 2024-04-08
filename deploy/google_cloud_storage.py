@@ -10,12 +10,12 @@ save_file_args = dict(io_type="google_storage", bucket_name="tennis_booking", cr
 
 if deploy:
     # deploy application configuration (used across both back and front-end)
-    cfg = load_file(f"/Users/andrewsanderson/Documents/dev/tennis-booking/cfg/{env}.cfg.json", io_type="os")
+    cfg = load_file(f"/Users/andrewsanderson/Documents/dev/tower-hamlets-tennis-court-watcher/cfg/{env}.cfg.json", io_type="os")
     # object_store[f"{env}.cfg.json"] = json.dumps(cfg)
     save_file(f"{env}.cfg.json", cfg, **save_file_args)  # dictionary -> JSON
 
     # deploy the cache data
-    cache = load_file(f"/Users/andrewsanderson/Documents/dev/tennis-booking/cfg/{env}.cache.json", io_type="os")
+    cache = load_file(f"/Users/andrewsanderson/Documents/dev/tower-hamlets-tennis-court-watcher/cfg/{env}.cache.json", io_type="os")
     # object_store[f"{env}.cache.json"] = json.dumps(cache)
     save_file(f"{env}.cache.json", cache, **save_file_args)  # dictionary -> JSON
 

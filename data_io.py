@@ -88,7 +88,7 @@ def save_file(item, data, io_type="os", prefix="", **kwargs):
 if __name__ == "__main__":
     df = pd.read_csv("/Users/andrewsanderson/Desktop/logs/pokemon_index_cache.csv")
 
-    cred = load_file("google-cloud-credentials.json", io_type="os", prefix="/Users/andrewsanderson/Documents/dev/tennis-booking/.secrets")
+    cred = load_file("google-cloud-credentials.json", io_type="os", prefix="/Users/andrewsanderson/Documents/dev/tower-hamlets-tennis-court-watcher/.secrets")
 
     obj_store = GoogleObjectStore(bucket_name="tennis_booking", credentials=cred)
     obj_store["test_object.json"] = df.head().to_json()  # i.e. convert pokemon index cache inputs to a JSON for GCP storage
