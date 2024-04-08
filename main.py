@@ -30,16 +30,16 @@ SCHEDULE = cfg.CONFIG["schedule"]  # number of days to look ahead (current date 
 PRUNE_CACHE_FREQUENCY = cfg.CONFIG["prune_cache_frequency"]  # minutes
 SLOT_NOTIFICATION_COOL_DOWN = cfg.CONFIG["slot_notification_cool_down"]  # hours
 
-COURT_NAME = "st-johns-park"
+VENUE = "st-johns-park"
 
-BOOKING_FOUND_MESSAGE = f"{{n}} tennis court slots available at {COURT_NAME}"
+BOOKING_FOUND_MESSAGE = f"{{n}} tennis court slots available at {VENUE}"
 BOOKING_FOUND_BODY = "{slots_html}" + ("\n" * 10) + "{timestamp}"
 
 BOOKING_SYSTEM_DOWN_MESSAGE = "Tennis booking court system down"
 
 BOOKING_SYSTEM_UP_MESSAGE = "Tennis booking court system back up and running"
 
-BOOKING_WIDGET_URL = f"https://tennistowerhamlets.com/book/courts/{COURT_NAME}/{{date}}#book"
+BOOKING_WIDGET_URL = f"https://tennistowerhamlets.com/book/courts/{VENUE}/{{date}}#book"
 BOOKING_WIDGET_URL_DATE_FORMAT = "%Y-%m-%d"
 
 CHROME_DRIVER = None
