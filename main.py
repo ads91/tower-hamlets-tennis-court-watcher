@@ -46,7 +46,6 @@ CHROME_DRIVER = None
 USE_CHROME_DRIVER = True
 # CHROME_DRIVER_PATH = ""  #'/Users/andrewsanderson/Documents/dev/chromedriver'
 
-
 TEXT_MESSAGE_FROM = ''
 TEXT_MESSAGE_TO = ''
 TEXT_MESSAGE_ACCOUNT_ID = ''
@@ -56,6 +55,8 @@ TEXT_MESSAGE_ACCOUNT_AUTH_TOKEN = ''
 AUTH = load_file("auth.json", io_type="os", prefix=os.path.join(os.path.dirname(__file__), ".secrets"))
 EMAILS = load_file("emails.json", io_type="os", prefix=os.path.join(os.path.dirname(__file__), ".secrets"))
 
+logger.info(f"Auth is {AUTH}")
+logger.info(f"Emails is {EMAILS}")
 
 EMAIL_SENDER = AUTH["emails"]["address"]
 EMAIL_SENDER_PASSWORD = AUTH["emails"]["password"]
