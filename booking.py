@@ -47,7 +47,7 @@ def _add_to_basket(driver, table_index, court, time, wait=1):
     return False
 
 
-def book(date, time_, day_start=7, courts=(1, 2), wait=1, pay=False):
+def book(date, time_, day_start=7, courts=(1, 2), wait=5, pay=False):
     logger.info(f"Checking for available slots on {date} at {time_}")
 
     time_string = str(time_).zfill(2) + ":00"
@@ -56,7 +56,7 @@ def book(date, time_, day_start=7, courts=(1, 2), wait=1, pay=False):
 
     # Spin up driver
     driver = get_chrome_driver(
-        url=url, driver_path="", sleep=3
+        url=url, driver_path="", sleep=1
     )
 
     # Attempt to add a court to the basket
@@ -86,19 +86,22 @@ def book(date, time_, day_start=7, courts=(1, 2), wait=1, pay=False):
     radio_button = WebDriverWait(driver, wait).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
     radio_button.click()
 
-    # Save & got to checkout
+    # Save & go to checkout
     selector = "#frm_basket_customer > div.controls > button"
-    radio_button = WebDriverWait(driver, wait).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
-    radio_button.click()
+    button = WebDriverWait(driver, wait).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
+    button.click()
 
     # Pay with card
     selector = "#btn-pay-now"
-    radio_button = WebDriverWait(driver, wait).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
-    radio_button.click()
+    button = WebDriverWait(driver, wait).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
+    button.click()
 
     # Fill in payment details
+    # selector = "#root > form"
+    # text_box = WebDriverWait(driver, wait).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
+    # text_box.click()
     for key, selector in CARD_DETAILS_MAPPING.items():
-        form = WebDriverWait(driver, wait).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
+        form = WebDriverWait(driver, wait).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))  # visibility_of_element_located?
         form.send_keys(AUTO_BOOK_DETAILS[key])
         logger.info(f"Entered value for {key}")
 
@@ -113,5 +116,5 @@ def book(date, time_, day_start=7, courts=(1, 2), wait=1, pay=False):
 
 if __name__ == "__main__":
     book(
-        date=datetime.date(2024, 4, 9), time_=15, wait=1, pay=False
+        date=datetime.date(2024, 4, 10), time_=16, wait=5, pay=False
     )
