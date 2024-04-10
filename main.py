@@ -32,7 +32,7 @@ SLOT_NOTIFICATION_COOL_DOWN = cfg.CONFIG["slot_notification_cool_down"]  # hours
 
 COURT_NAME = "st-johns-park"
 
-BOOKING_FOUND_MESSAGE = f"{{n}} tennis court slots available at {COURT_NAME}"
+BOOKING_FOUND_MESSAGE = f"{{n}} tennis court slots available at {COURT_NAME} ({{timestamp}})"
 BOOKING_FOUND_BODY = "{slots_html}" + ("\n" * 10) + "{timestamp}"
 
 BOOKING_SYSTEM_DOWN_MESSAGE = "Tennis booking court system down"
@@ -166,7 +166,7 @@ def check_booking_system(cache, start, window, schedule, week="", message_box=Fa
 
     # send email (include multiple slots in one email)
     if notify:
-        msg = BOOKING_FOUND_MESSAGE.format(n=len(df))
+        msg = BOOKING_FOUND_MESSAGE.format(n=len(df), timestamp=timestamp)
         dispatch_alerts(
             msg=msg,
             recipients=EMAIL_SLOT_AVAILABLE_RECIPIENTS,
