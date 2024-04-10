@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 logging.getLogger("WDM").setLevel("WARNING")
+logging.getLogger("apscheduler").setLevel("WARNING")
 
 
 WINDOW = cfg.CONFIG["window"]  # slots in which to notify recipients
