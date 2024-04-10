@@ -105,7 +105,7 @@ def reload_content(driver, url, date, sleep=0, reload_interval=10):
         # check to see if courts are even available to book for this date
         closed_for_booking_check = current.find("p", attrs={"class": "closed"})
         if closed_for_booking_check:
-            logger.warning(closed_for_booking_check.string)
+            logger.debug(closed_for_booking_check.string)
             return None
 
         # extract expected date location from HTML
@@ -142,7 +142,7 @@ def check_booking_system(cache, start, window, schedule, week="", message_box=Fa
     # loop the days in the schedule
     df, dates, notify = pd.DataFrame(), [start + datetime.timedelta(days=i) for i in range(window)], False
 
-    logger.info(f"Searching from {dates[0]} for {window} days")
+    logger.debug(f"Searching from {dates[0]} for {window} days")
     for date in dates:
         day, url = date.strftime("%a"), BOOKING_WIDGET_URL.format(date=date.strftime(BOOKING_WIDGET_URL_DATE_FORMAT))
         logger.debug(f"Directing chrome driver instance to {url}")
@@ -276,7 +276,7 @@ def main(wait_time=60, message_box=False, email=False, text_message=False):
             # system not running normally
             sys_down = True
 
-        logger.info(f"Sleeping for {wait_time} second(s) before next search")
+        logger.debug(f"Sleeping for {wait_time} second(s) before next search")
         time.sleep(wait_time)
 
         # if system down, reload Chrome Driver
