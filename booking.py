@@ -1,4 +1,5 @@
 import selenium
+import argparse
 
 from main import *
 from data_io import load_file
@@ -7,6 +8,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
+from apscheduler.triggers.cron import CronTrigger
+from apscheduler.schedulers.blocking import BlockingScheduler
 
 
 logger = logging.getLogger(__name__)
@@ -120,7 +123,34 @@ def book(date, time_, day_start=7, courts=(1, 2), wait=5, pay=False):
         logging.warning("Not making payment until explicitly told to")
 
 
-if __name__ == "__main__":
-    book(
-        date=datetime.date(2024, 4, 17), time_=10, wait=5, pay=False
+def schedule(cron_schedule, slot_day, slot_time, pay):
+    scheduler = BlockingScheduler(job_defaults={"misfire_grace_time": None})
+    scheduler.add_job(
+        func=book,
+        trigger=CronTrigger.from_crontab(cron_schedule),
+        kwargs=dict(
+            date=datetime.datetime.strptime(slot_day, "%Y-%m-%d"),
+            time_=int(slot_time),
+            pay={"TRUE": True, "FALSE": False}[pay.upper()]
+        )
     )
+    scheduler.start()
+
+
+if __name__ == "__main__":
+    # python3 booking.py --cron_schedule "0 14 * * tue" --slot_day "2024-04-17" --slot_time "10" --pay FALSE
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--cron_schedule")  # when to attempt to book e.g. "0 0 * * sat" (midnight Friday/the beginning of Saturday)
+    parser.add_argument("--slot_day")  # the day of the slot to book (in format YYYY-MM-DD)
+    parser.add_argument("--slot_time")  # the time of the slot to book (i.e. 22 for 10PM)
+    parser.add_argument("--pay", default="FALSE")  # TRUE or FALSE, will only click pay button if set to TRUE
+    args, _ = parser.parse_known_args()
+
+    logging.info(f"Command line args are: {args.__dict__}")
+
+    schedule(**args.__dict__)
+
+    # book(
+    #     date=datetime.date(2024, 4, 17), time_=10, wait=5, pay=False
+    # )
