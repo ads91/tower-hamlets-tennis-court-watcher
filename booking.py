@@ -3,8 +3,9 @@ import selenium
 from main import *
 from data_io import load_file
 from utils.utils import get_chrome_driver
-from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 
 
@@ -24,9 +25,9 @@ PERSONAL_DETAILS_MAPPING = {
 
 
 CARD_DETAILS_MAPPING = {
-    "card-number": "#root > form > div > div.CardField-input-wrapper > span.CardField-number.CardField-child > span:nth-child(2) > div > div.CardNumberField-input-wrapper > span > input",
-    "expiry": "#root > form > div > div.CardField-input-wrapper > span.CardField-restWrapper > span.CardField-expiry.CardField-child > span > span > input",
-    "cvc": "#root > form > div > div.CardField-input-wrapper > span.CardField-restWrapper > span.CardField-cvc.CardField-child > span > span > input"
+    "card-number": "#card-element > div > iframe",
+    "expiry": None,  # no selector, just hit tab from current selection
+    "cvc": None  # no selector, just hit tab from current selection
 }
 
 
@@ -62,8 +63,8 @@ def book(date, time_, day_start=7, courts=(1, 2), wait=5, pay=False):
     # Attempt to add a court to the basket
     added_to_basket, table_index = False, 1 + (time_ - day_start)
     for court in list(courts):
-        if _add_to_basket(driver, table_index, court, time=time_string, wait=wait):
-            added_to_basket = True
+        added_to_basket = _add_to_basket(driver, table_index, court, time=time_string, wait=wait)
+        if added_to_basket:
             break
 
     # Don't continue execution if nothing added to basket
@@ -97,24 +98,29 @@ def book(date, time_, day_start=7, courts=(1, 2), wait=5, pay=False):
     button.click()
 
     # Fill in payment details
-    # selector = "#root > form"
-    # text_box = WebDriverWait(driver, wait).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
-    # text_box.click()
+    time.sleep(wait)  # important to have as we can't inspect as to when Stripe's payment widget has loaded!!
     for key, selector in CARD_DETAILS_MAPPING.items():
-        form = WebDriverWait(driver, wait).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))  # visibility_of_element_located?
-        form.send_keys(AUTO_BOOK_DETAILS[key])
+        if selector:
+            form = WebDriverWait(driver, wait).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))  # visibility_of_element_located?
+            form.send_keys(AUTO_BOOK_DETAILS[key])
+        else:
+            # git tab & then enter details in the next cell
+            selenium.webdriver.ActionChains(driver).send_keys(Keys.TAB).perform()
+            active_element = driver.switch_to.active_element
+            active_element.send_keys(AUTO_BOOK_DETAILS[key])
         logger.info(f"Entered value for {key}")
 
     # Press the pay button
+    selector = "#submit"
+    button = WebDriverWait(driver, wait).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
     if pay:
-        pass
+        button.click()
+        logging.info(f"Booked court {court} at {VENUE} for {time_} on {date}")
     else:
         logging.warning("Not making payment until explicitly told to")
-
-    print("")
 
 
 if __name__ == "__main__":
     book(
-        date=datetime.date(2024, 4, 10), time_=16, wait=5, pay=False
+        date=datetime.date(2024, 4, 17), time_=10, wait=5, pay=False
     )
