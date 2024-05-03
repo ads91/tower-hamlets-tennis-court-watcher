@@ -134,7 +134,7 @@ def force_book(**kwargs):
             if book(**kwargs):
                 break
         except Exception as _:
-            logger.error(f"Failed to book on attempt number {attempt}")
+            logger.error(f"Failed to book on attempt number {attempt}", exc_info=True)
         attempt += 1
 
     logger.info("Done attempting to book")
@@ -158,7 +158,7 @@ def run():
     # python3 booking.py --cron_schedule "7 15 * * fri" --slot_day "2024-05-07" --slot_time "13" --pay FALSE
 
     # python3 booking.py --cron_schedule "0 0 * * sat" --slot_day "2024-05-11" --slot_time "14" --pay FALSE
-    # python3 booking.py --cron_schedule "0 0 * * fri" --slot_day "2024-05-11" --slot_time "15" --pay FALSE
+    # python3 booking.py --cron_schedule "0 0 * * sat" --slot_day "2024-05-11" --slot_time "15" --pay FALSE
 
     parser = argparse.ArgumentParser()
 
