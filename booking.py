@@ -73,7 +73,7 @@ def book(date, time_, day_start=7, courts=(1, 2), wait=5, pay=False):
     # Don't continue execution if nothing added to basket
     if not added_to_basket:
         logger.warning("No slots were booked")
-        return
+        return False
 
     # Navigate to the basket
     driver.get("https://tennistowerhamlets.com/basket")
@@ -108,7 +108,7 @@ def book(date, time_, day_start=7, courts=(1, 2), wait=5, pay=False):
             form.send_keys(AUTO_BOOK_DETAILS[key])
         else:
             # git tab & then enter details in the next cell
-            selenium.webdriver.ActionChains(driver).send_keys(Keys.TAB).perform()
+            # selenium.webdriver.ActionChains(driver).send_keys(Keys.TAB).perform()  # only needed for incorrect card details (Stripe auto-tabs for correct details)
             active_element = driver.switch_to.active_element
             active_element.send_keys(AUTO_BOOK_DETAILS[key])
         logger.info(f"Entered value for {key}")
@@ -119,14 +119,31 @@ def book(date, time_, day_start=7, courts=(1, 2), wait=5, pay=False):
     if pay:
         button.click()
         logging.info(f"Booked court {court} at {VENUE} for {time_} on {date}")
+        return True
     else:
         logging.warning("Not making payment until explicitly told to")
+
+    return False
+
+
+def force_book(**kwargs):
+    attempt, attempts = 1, kwargs.get("attempts", 3)
+
+    while attempt <= attempts:
+        try:
+            if book(**kwargs):
+                break
+        except Exception as _:
+            logger.error(f"Failed to book on attempt number {attempt}")
+        attempt += 1
+
+    logger.info("Done attempting to book")
 
 
 def schedule(cron_schedule, slot_day, slot_time, pay):
     scheduler = BlockingScheduler(job_defaults={"misfire_grace_time": None})
     scheduler.add_job(
-        func=book,
+        func=force_book,
         trigger=CronTrigger.from_crontab(cron_schedule),
         kwargs=dict(
             date=datetime.datetime.strptime(slot_day, "%Y-%m-%d"),
@@ -137,8 +154,12 @@ def schedule(cron_schedule, slot_day, slot_time, pay):
     scheduler.start()
 
 
-if __name__ == "__main__":
-    # python3 booking.py --cron_schedule "0 14 * * tue" --slot_day "2024-04-17" --slot_time "10" --pay FALSE
+def run():
+    # python3 booking.py --cron_schedule "7 15 * * fri" --slot_day "2024-05-07" --slot_time "13" --pay FALSE
+
+    # python3 booking.py --cron_schedule "0 0 * * sat" --slot_day "2024-05-11" --slot_time "14" --pay FALSE
+    # python3 booking.py --cron_schedule "0 0 * * fri" --slot_day "2024-05-11" --slot_time "15" --pay FALSE
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--cron_schedule")  # when to attempt to book e.g. "0 0 * * sat" (midnight Friday/the beginning of Saturday)
@@ -151,6 +172,9 @@ if __name__ == "__main__":
 
     schedule(**args.__dict__)
 
+
+if __name__ == "__main__":
+    run()
     # book(
-    #     date=datetime.date(2024, 4, 17), time_=10, wait=5, pay=False
+    #     date=datetime.date(2024, 5, 8), time_=12, wait=3, pay=False
     # )
