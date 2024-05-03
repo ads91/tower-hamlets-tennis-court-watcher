@@ -77,7 +77,7 @@ def book(date, time_, day_start=7, courts=(1, 2), wait=5, pay=False):
 
     # Navigate to the basket
     driver.get("https://tennistowerhamlets.com/basket")
-    time.sleep(3)
+    # time.sleep(3)
 
     # Fill in required personal details
     for key, selector in PERSONAL_DETAILS_MAPPING.items():
@@ -118,7 +118,7 @@ def book(date, time_, day_start=7, courts=(1, 2), wait=5, pay=False):
     button = WebDriverWait(driver, wait).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
     if pay:
         button.click()
-        logging.info(f"Booked court {court} at {VENUE} for {time_} on {date}")
+        _, _ = time.sleep(30), logging.info(f"Booked court {court} at {VENUE} for {time_} on {date}")
         return True
     else:
         logging.warning("Not making payment until explicitly told to")
@@ -176,5 +176,5 @@ def run():
 if __name__ == "__main__":
     run()
     # book(
-    #     date=datetime.date(2024, 5, 8), time_=12, wait=3, pay=False
+    #     date=datetime.date(2024, 5, 8), time_=14, wait=5, pay=False
     # )
