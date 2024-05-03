@@ -77,7 +77,7 @@ def book(date, time_, day_start=7, courts=(1, 2), wait=5, pay=False):
 
     # Navigate to the basket
     driver.get("https://tennistowerhamlets.com/basket")
-    time.sleep(3)
+    # time.sleep(3)
 
     # Fill in required personal details
     for key, selector in PERSONAL_DETAILS_MAPPING.items():
@@ -118,7 +118,7 @@ def book(date, time_, day_start=7, courts=(1, 2), wait=5, pay=False):
     button = WebDriverWait(driver, wait).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
     if pay:
         button.click()
-        logging.info(f"Booked court {court} at {VENUE} for {time_} on {date}")
+        _, _ = time.sleep(30), logging.info(f"Booked court {court} at {VENUE} for {time_} on {date}")
         return True
     else:
         logging.warning("Not making payment until explicitly told to")
@@ -134,7 +134,7 @@ def force_book(**kwargs):
             if book(**kwargs):
                 break
         except Exception as _:
-            logger.error(f"Failed to book on attempt number {attempt}")
+            logger.error(f"Failed to book on attempt number {attempt}", exc_info=True)
         attempt += 1
 
     logger.info("Done attempting to book")
@@ -158,7 +158,7 @@ def run():
     # python3 booking.py --cron_schedule "7 15 * * fri" --slot_day "2024-05-07" --slot_time "13" --pay FALSE
 
     # python3 booking.py --cron_schedule "0 0 * * sat" --slot_day "2024-05-11" --slot_time "14" --pay FALSE
-    # python3 booking.py --cron_schedule "0 0 * * fri" --slot_day "2024-05-11" --slot_time "15" --pay FALSE
+    # python3 booking.py --cron_schedule "0 0 * * sat" --slot_day "2024-05-11" --slot_time "15" --pay FALSE
 
     parser = argparse.ArgumentParser()
 
@@ -176,5 +176,5 @@ def run():
 if __name__ == "__main__":
     run()
     # book(
-    #     date=datetime.date(2024, 5, 8), time_=12, wait=3, pay=False
+    #     date=datetime.date(2024, 5, 8), time_=14, wait=5, pay=False
     # )
