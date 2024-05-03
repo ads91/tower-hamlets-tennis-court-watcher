@@ -123,10 +123,23 @@ def book(date, time_, day_start=7, courts=(1, 2), wait=5, pay=False):
         logging.warning("Not making payment until explicitly told to")
 
 
+def force_book(**kwargs):
+    attempt, attempts = 1, kwargs.get("attempts", 3)
+
+    while attempt <= attempts:
+        try:
+            book(**kwargs)
+        except Exception as _:
+            logger.error(f"Failed to book on attempt number {attempt}")
+        attempt += 1
+
+    logger.info("Done attempting to book")
+
+
 def schedule(cron_schedule, slot_day, slot_time, pay):
     scheduler = BlockingScheduler(job_defaults={"misfire_grace_time": None})
     scheduler.add_job(
-        func=book,
+        func=force_book,
         trigger=CronTrigger.from_crontab(cron_schedule),
         kwargs=dict(
             date=datetime.datetime.strptime(slot_day, "%Y-%m-%d"),
@@ -138,7 +151,11 @@ def schedule(cron_schedule, slot_day, slot_time, pay):
 
 
 if __name__ == "__main__":
-    # python3 booking.py --cron_schedule "0 14 * * tue" --slot_day "2024-04-17" --slot_time "10" --pay FALSE
+    # python3 booking.py --cron_schedule "5 14 * * fri" --slot_day "2024-05-07" --slot_time "12" --pay FALSE
+
+    # python3 booking.py --cron_schedule "0 0 * * sat" --slot_day "2024-05-11" --slot_time "14" --pay FALSE
+    # python3 booking.py --cron_schedule "0 0 * * fri" --slot_day "2024-05-11" --slot_time "15" --pay FALSE
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--cron_schedule")  # when to attempt to book e.g. "0 0 * * sat" (midnight Friday/the beginning of Saturday)
