@@ -14,7 +14,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 LOGGER = logging.getLogger(__name__)
 
 
-def get_chrome_driver(url="", driver_path="", sleep=0, chrome_version=123):
+def get_chrome_driver(url="", driver_path="", sleep=0, chrome_version=126):
     options = webdriver.ChromeOptions()
     options.add_argument("start-maximized")
     options.add_argument("--headless")
