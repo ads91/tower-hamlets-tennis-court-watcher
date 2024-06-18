@@ -3,6 +3,8 @@ import datetime
 
 import pandas as pd
 
+from io import StringIO
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -40,7 +42,7 @@ class BookingSlot(object):
 
 def get_permissible_slots(content, date, schedule, url="", week=""):
     """ Return a list of BookingSlot instances for permissible days. """
-    df, slots = pd.read_html(io=str(content.find_all("div", attrs={"class": "availability"})))[0], []
+    df, slots = pd.read_html(io=StringIO(str(content.find_all("div", attrs={"class": "availability"}))))[0], []
 
     if df.empty:
         return slots
