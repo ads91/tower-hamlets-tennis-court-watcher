@@ -40,7 +40,7 @@ CARD_DETAILS_MAPPING = {
 }
 
 
-def _add_to_basket(driver, table_index, court, time, wait=1):
+def add_to_basket(driver, table_index, court, time, wait=1):
     logger.info(f"Attempting to add court {court} at {time} to the basket")
 
     selector = f"#book > div.availability > form > table > tbody > tr:nth-child({table_index}) > td > label:nth-child({court}) > span.button.available"
@@ -75,7 +75,7 @@ def book(date, time_, day_start=7, courts=(1, 2), wait=5, delay=0, pay=False):
     # Attempt to add a court to the basket
     added_to_basket, table_index = False, 1 + (time_ - day_start)
     for court in list(courts):
-        added_to_basket = _add_to_basket(DRIVER, table_index, court, time=time_string, wait=wait)
+        added_to_basket = add_to_basket(DRIVER, table_index, court, time=time_string, wait=wait)
         if added_to_basket:
             break
 
@@ -165,15 +165,15 @@ def schedule(cron_schedule, slot_day, slot_time, delay, pay):
 
 
 def run():
-    # python3 booking.py --cron_schedule "0 0 * * sat" --slot_day "2024-06-29" --slot_time "14" --pay FALSE
-    # python3 booking.py --cron_schedule "0 0 * * sat" --slot_day "2024-06-29" --slot_time "15" --pay FALSE
+    # python3 booking.py --cron_schedule "0 0 * * sat" --slot_day "2024-06-29" --slot_time "14" --delay 1 --pay FALSE
+    # python3 booking.py --cron_schedule "0 0 * * sat" --slot_day "2024-06-29" --slot_time "15" --delay 1 --pay FALSE
 
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--cron_schedule")  # when to attempt to book e.g. "0 0 * * sat" (midnight Friday/the beginning of Saturday)
     parser.add_argument("--slot_day")  # the day of the slot to book (in format YYYY-MM-DD)
     parser.add_argument("--slot_time")  # the time of the slot to book (i.e. 22 for 10PM)
-    parser.add_argument("--delay", "0")  # seconds delay before performing operations
+    parser.add_argument("--delay", default="0")  # seconds delay before performing operations
     parser.add_argument("--pay", default="FALSE")  # TRUE or FALSE, will only click pay button if set to TRUE
     args, _ = parser.parse_known_args()
 
