@@ -57,7 +57,7 @@ def add_to_basket(driver, table_index, court, time, wait=1):
     return False
 
 
-def book(date, time_, day_start=7, courts=(1, 2), wait=5, delay=0, pay=False):
+def book(date, time_, day_start=7, courts=(1, 2), wait=5, delay=0, pay=False, **kwargs):
     logger.info(f"Checking for available slots on {date} at {time_}")
 
     time_string = str(time_).zfill(2) + ":00"
@@ -68,6 +68,7 @@ def book(date, time_, day_start=7, courts=(1, 2), wait=5, delay=0, pay=False):
     _, _ = logger.info(f"Delaying execution by {delay} seconds"), time.sleep(delay)
 
     # Spin up driver
+    logger.info(f"Querying {url}")
     DRIVER.get(
         url=url
     )
@@ -149,7 +150,7 @@ def force_book(**kwargs):
     logger.info("Done attempting to book")
 
 
-def schedule(cron_schedule, slot_day, slot_time, delay, pay):
+def schedule(cron_schedule, slot_day, slot_time, attempts, delay, pay):
     scheduler = BlockingScheduler(job_defaults={"misfire_grace_time": None})
     scheduler.add_job(
         func=force_book,
@@ -157,6 +158,7 @@ def schedule(cron_schedule, slot_day, slot_time, delay, pay):
         kwargs=dict(
             date=datetime.datetime.strptime(slot_day, "%Y-%m-%d"),
             time_=int(slot_time),
+            attempts=int(attempts),
             delay=int(delay),
             pay={"TRUE": True, "FALSE": False}[pay.upper()]
         )
@@ -173,6 +175,7 @@ def run():
     parser.add_argument("--cron_schedule")  # when to attempt to book e.g. "0 0 * * sat" (midnight Friday/the beginning of Saturday)
     parser.add_argument("--slot_day")  # the day of the slot to book (in format YYYY-MM-DD)
     parser.add_argument("--slot_time")  # the time of the slot to book (i.e. 22 for 10PM)
+    parser.add_argument("--attempts", default="3")  # number of attempts to book the slot
     parser.add_argument("--delay", default="0")  # seconds delay before performing operations
     parser.add_argument("--pay", default="FALSE")  # TRUE or FALSE, will only click pay button if set to TRUE
     args, _ = parser.parse_known_args()
