@@ -9,12 +9,14 @@ from utils.date_time import TimeZoneManager
 LOGGER = logging.getLogger(__name__)
 
 ENV = os.environ.get("APP_ENVIRONMENT", "LOC")  # default to local config
+CONFIG_EXTRAS = os.environ.get("CONFIG_EXTRAS", "")  # default to local config
+
 DEFAULT_LOGGER_ARGS = {
     "format": "%(asctime)s - %(levelname)s - %(name)s:%(lineno)s  - %(message)s",
     "level": logging.INFO
 }
 GOOGLE_CLOUD_CREDENTIALS = {}
-JSON_FILE = f"{ENV}.cfg.json"
+JSON_FILE = f"{ENV}.cfg{CONFIG_EXTRAS}.json"
 FILE_IO_KWARGS = {
     "io_type": "os",
     "prefix": os.path.dirname(__file__),

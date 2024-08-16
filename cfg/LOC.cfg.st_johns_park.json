@@ -1,0 +1,74 @@
+{
+  "venue": "st-johns-park",
+  "auth_config_path": "auth.json",
+  "emails_config_path": "emails.st_johns_park.json",
+  "timezone": "Europe/London",
+  "timezone_hour_offset": 1,
+  "chrome": {
+    "browser": "",
+    "driver": "",
+    "sleep": 10,
+    "reload_frequency": 100
+  },
+  "cache_file": "LOC.cache.st_johns_park.json",
+  "runtime_args": {
+    "wait_time": 60,
+    "email": true,
+    "message_box": false,
+    "text_message": false
+  },
+  "window": 9,
+  "prune_cache_frequency": 15,
+  "slot_notification_cool_down": 12,
+  "schedule": {
+    "Mon": [
+      18,
+      19,
+      20
+    ],
+    "Tue": [
+      18,
+      19,
+      20
+    ],
+    "Wed": [
+      18,
+      19,
+      20
+    ],
+    "Thu": [
+      18,
+      19,
+      20
+    ],
+    "Fri": [
+      18,
+      19,
+      20
+    ],
+    "Sat": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ],
+    "Sun": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ]
+  }
+}

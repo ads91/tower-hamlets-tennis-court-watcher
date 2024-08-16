@@ -31,7 +31,7 @@ SCHEDULE = cfg.CONFIG["schedule"]  # number of days to look ahead (current date 
 PRUNE_CACHE_FREQUENCY = cfg.CONFIG["prune_cache_frequency"]  # minutes
 SLOT_NOTIFICATION_COOL_DOWN = cfg.CONFIG["slot_notification_cool_down"]  # hours
 
-VENUE = "st-johns-park"
+VENUE = cfg.CONFIG["venue"]
 
 BOOKING_FOUND_MESSAGE = f"{{n}} tennis court slots available at {VENUE} ({{timestamp}})"
 BOOKING_FOUND_BODY = "{slots_html}" + ("\n" * 10) + "{timestamp}"
@@ -53,8 +53,12 @@ TEXT_MESSAGE_ACCOUNT_ID = ''
 TEXT_MESSAGE_ACCOUNT_AUTH_TOKEN = ''
 # TEXT_MESSAGE_CLIENT = Client(TEXT_MESSAGE_ACCOUNT_ID, TEXT_MESSAGE_ACCOUNT_AUTH_TOKEN)
 
-AUTH = load_file("auth.json", io_type="os", prefix=os.path.join(os.path.dirname(__file__), ".secrets"))
-EMAILS = load_file("emails.json", io_type="os", prefix=os.path.join(os.path.dirname(__file__), ".secrets"))
+AUTH = load_file(
+    cfg.CONFIG["auth_config_path"], io_type="os", prefix=os.path.join(os.path.dirname(__file__), ".secrets")
+)
+EMAILS = load_file(
+    cfg.CONFIG["emails_config_path"], io_type="os", prefix=os.path.join(os.path.dirname(__file__), ".secrets")
+)
 
 logger.info(f"Auth is {AUTH}")
 logger.info(f"Emails is {EMAILS}")
