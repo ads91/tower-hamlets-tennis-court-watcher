@@ -1,4 +1,7 @@
 {
+  "venue": "st-johns-park",
+  "auth_config_path": "auth.json",
+  "emails_config_path": "emails.st_johns_park.json",
   "timezone": "Europe/London",
   "timezone_hour_offset": 1,
   "chrome": {
@@ -7,7 +10,7 @@
     "sleep": 10,
     "reload_frequency": 100
   },
-  "cache_file": "LOC.cache.json",
+  "cache_file": "LOC.cache.st_johns_park.json",
   "runtime_args": {
     "wait_time": 60,
     "email": true,

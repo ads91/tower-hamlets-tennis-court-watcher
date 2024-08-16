@@ -1,0 +1,44 @@
+{
+  "venue": "poplar-rec-ground",
+  "auth_config_path": "auth.json",
+  "emails_config_path": "emails.poplar_rec_ground.json",
+  "timezone": "Europe/London",
+  "timezone_hour_offset": 1,
+  "chrome": {
+    "browser": "",
+    "driver": "",
+    "sleep": 10,
+    "reload_frequency": 100
+  },
+  "cache_file": "LOC.cache.poplar_rec_ground.json",
+  "runtime_args": {
+    "wait_time": 60,
+    "email": true,
+    "message_box": false,
+    "text_message": false
+  },
+  "window": 9,
+  "prune_cache_frequency": 15,
+  "slot_notification_cool_down": 12,
+  "schedule": {
+    "Mon": [
+      18,
+      19,
+      20
+    ],
+    "Tue": [],
+    "Wed": [
+      18,
+      19,
+      20
+    ],
+    "Thu": [],
+    "Fri": [
+      18,
+      19,
+      20
+    ],
+    "Sat": [],
+    "Sun": []
+  }
+}
