@@ -5,7 +5,7 @@
 cd /Users/andrewsanderson/Documents/dev/tower-hamlets-tennis-court-watcher
 
 # The command you want to run indefinitely
-COMMAND="./venv/bin/python3 main.py"
+COMMAND="/Users/andrewsanderson/Documents/dev/tower-hamlets-tennis-court-watcher/.venv/bin/python main.py"
 
 # Loop indefinitely
 while true; do
