@@ -249,8 +249,9 @@ def main(wait_time=60, message_box=False, email=False, text_message=False):
     while True:
         try:
             # reload driver
-            # if cycle_count % cfg.CONFIG["chrome"]["reload_frequency"] == 0:
-            #     reload_chrome_driver(close_existing=True)
+            if cycle_count % cfg.CONFIG["chrome"]["reload_frequency"] == 0:
+                # reload_chrome_driver(close_existing=True)
+                logger.info(f"Cycle count: {cycle_count}")
             # ensure start date rolls
             start = cfg.TIME_ZONE_MANAGER.now().date()
             # check the booking system: loops schedule and checks "bookability" of slots; notifies if slots found
