@@ -21,13 +21,24 @@ def get_chrome_driver(
         chrome_version=148
 ):
     options = webdriver.ChromeOptions()
-    options.add_argument("start-maximized")
-    options.add_argument("--headless")
-    options.add_argument("--disable-dev-shm-usage")
+
+    options.add_argument("--headless=new")
+
+    # Reduce automation fingerprints
+    options.add_argument("--disable-blink-features=AutomationControlled")
+
+    # Stability
+    options.add_argument("--window-size=1920,1080")
+    options.add_argument("--start-maximized")
     options.add_argument("--no-sandbox")
-    options.add_argument("--incognito")
-    # options.add_argument("--disable-gpu")
-    # options.add_argument("--window-size=%s" % window_size)  # window_size="1920,1080"
+    options.add_argument("--disable-dev-shm-usage")
+
+    # Realistic browser fingerprint
+    options.add_argument(
+        "--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        f"Chrome/{chrome_version}.0.0.0 Safari/537.36"
+    )
 
     # derive driver path (download latest if none provided)
     driver_path = driver_path or ChromeDriverManager().install()
@@ -35,8 +46,13 @@ def get_chrome_driver(
 
     # create the driver instance
     chrome_driver = uc.Chrome(
-        executable_path=driver_path, options=options, version_main=chrome_version
+        executable_path=driver_path,
+        options=options,
+        version_main=chrome_version,
+        use_subprocess=True
     )
+
+    chrome_driver.get("about:blank")
 
     # wait for driver to load content at URL
     _, _ = LOGGER.debug(f"Sleeping: {sleep}"), time.sleep(sleep)
