@@ -1,4 +1,7 @@
 # Created by .ignore support plugin (hsz.mobi)
+### tower-hamlets-tennis-court-watcher
+*.cache.*.json
+
 ### Python template
 # Byte-compiled / optimized / DLL files
 __pycache__/
