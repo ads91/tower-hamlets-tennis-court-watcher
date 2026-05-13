@@ -250,7 +250,8 @@ def main(wait_time=60, message_box=False, email=False, text_message=False):
         try:
             # reload driver
             if cycle_count % cfg.CONFIG["chrome"]["reload_frequency"] == 0:
-                reload_chrome_driver(close_existing=True)
+                # reload_chrome_driver(close_existing=True)
+                logger.info(f"Cycle count: {cycle_count}")
             # ensure start date rolls
             start = cfg.TIME_ZONE_MANAGER.now().date()
             # check the booking system: loops schedule and checks "bookability" of slots; notifies if slots found
@@ -295,17 +296,15 @@ def _test():
     global CHROME_DRIVER
 
     CHROME_DRIVER = get_chrome_driver(
-        url=BOOKING_WIDGET_URL.format(date="2022-10-10"),  # url
+        url=BOOKING_WIDGET_URL.format(date="2026-5-12"),  # url
         driver_path="",
-        sleep=1
+        sleep=5
     )
 
-    content = extract_site_contents(chrome_driver=CHROME_DRIVER, sleep=1)
-    slots_content = content.find_all("span", attrs={"class": "available-booking-slot"})
+    CHROME_DRIVER.save_screenshot("debug.png")
 
-    slot = BookingSlot(slots_content[0], datetime.date(2022, 10, 10), [], week="")
-    print(slot)
-    assert slot.is_bookable
+    with open("page.html", "w", encoding="utf-8") as f:
+        f.write(CHROME_DRIVER.page_source)
 
 
 if __name__ == "__main__":
