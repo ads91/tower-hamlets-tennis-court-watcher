@@ -18,7 +18,7 @@ def get_chrome_driver(
         url="",
         driver_path="",
         sleep=0,
-        chrome_version=148
+        chrome_version=150
 ):
     options = webdriver.ChromeOptions()
 
