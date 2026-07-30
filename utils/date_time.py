@@ -15,7 +15,8 @@ class TimeZoneManager(object):
         self.offset = datetime.timedelta(hours=hour_offset)
 
     def now(self):
-        return (datetime.datetime.utcnow() + self.offset).astimezone(pytz.timezone(self.timezone)).replace(tzinfo=None)
+        utc_now = datetime.datetime.now(datetime.timezone.utc) + self.offset
+        return utc_now.astimezone(pytz.timezone(self.timezone)).replace(tzinfo=None)
 
 
 if __name__ == "__main__":

@@ -18,7 +18,9 @@ def get_chrome_driver(
         url="",
         driver_path="",
         sleep=0,
-        chrome_version=150
+        chrome_version=150,
+        init_retries=3,
+        init_retry_sleep=2
 ):
     options = webdriver.ChromeOptions()
 
@@ -44,25 +46,46 @@ def get_chrome_driver(
     driver_path = driver_path or ChromeDriverManager().install()
     LOGGER.info(f"Chrome Driver path is '{driver_path}'")
 
-    # create the driver instance
-    chrome_driver = uc.Chrome(
-        executable_path=driver_path,
-        options=options,
-        version_main=chrome_version,
-        use_subprocess=True
-    )
+    for attempt in range(1, int(init_retries) + 1):
+        chrome_driver = None
+        try:
+            # create the driver instance
+            chrome_driver = uc.Chrome(
+                executable_path=driver_path,
+                options=options,
+                version_main=chrome_version,
+                use_subprocess=True
+            )
 
-    chrome_driver.get("about:blank")
+            chrome_driver.set_page_load_timeout(25)
 
-    # wait for driver to load content at URL
-    _, _ = LOGGER.debug(f"Sleeping: {sleep}"), time.sleep(sleep)
+            # Warm up the browser and validate at least one live window exists.
+            chrome_driver.get("about:blank")
+            if not chrome_driver.window_handles:
+                raise RuntimeError("Chrome driver initialized without an active window")
 
-    # make a request through the driver
-    if url:
-        LOGGER.info(f"Requesting: {url}")
-        chrome_driver.get(url)
+            # wait for driver to load content at URL
+            _, _ = LOGGER.debug(f"Sleeping: {sleep}"), time.sleep(sleep)
 
-    return chrome_driver
+            # make a request through the driver
+            if url:
+                LOGGER.info(f"Requesting: {url}")
+                chrome_driver.get(url)
+
+            return chrome_driver
+        except Exception as ex:
+            LOGGER.warning(
+                f"Chrome driver initialization attempt {attempt}/{init_retries} failed: {ex}",
+                exc_info=True
+            )
+            if chrome_driver is not None:
+                try:
+                    chrome_driver.quit()
+                except Exception:
+                    LOGGER.debug("Failed to quit partially-initialized Chrome driver", exc_info=True)
+            if attempt >= int(init_retries):
+                raise
+            time.sleep(init_retry_sleep)
 
 
 def extract_site_contents(**kwargs):

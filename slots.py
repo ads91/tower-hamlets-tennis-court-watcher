@@ -45,7 +45,7 @@ def get_permissible_slots(content, date, schedule, url="", week=""):
     df, slots = pd.read_html(io=StringIO(str(content.find_all("div", attrs={"class": "availability"}))))[0], []
 
     if df.empty:
-        return slots
+        return get_email_frame([], date, url), slots
 
     # split on the "Court" identifier
     df[2] = df[1].str.split("Court")
@@ -64,8 +64,8 @@ def get_permissible_slots(content, date, schedule, url="", week=""):
     df.index.names = ["time", "court"]
     df = df.reset_index()
 
-    # transform time field
-    df["time"] = df["time"].apply(lambda t: int(t[:-2]) + {"am": 0, "pm": 12}[t[-2:]])
+    # transform time field (e.g. 12am -> 0, 12pm -> 12)
+    df["time"] = df["time"].apply(lambda t: datetime.datetime.strptime(t, "%I%p").hour)
 
     # assume those with a £ sign are unbooked
     df = df[df["status"].str.contains("£")]

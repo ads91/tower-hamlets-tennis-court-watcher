@@ -28,6 +28,9 @@ WINDOW = cfg.CONFIG["window"]  # slots in which to notify recipients
 SCHEDULE = cfg.CONFIG["schedule"]  # number of days to look ahead (current date inclusive)
 # SCHEDULE = {k: [i+1 for i in range(24)] for k, _ in SCHEDULE.items()}  # for testing purposes
 
+CHROME_PAGE_POLL_SLEEP = float(cfg.CONFIG.get("chrome", {}).get("page_poll_sleep", 0.5))
+CHROME_MAX_QUERY_ATTEMPTS = int(cfg.CONFIG.get("chrome", {}).get("max_query_attempts", 8))
+
 PRUNE_CACHE_FREQUENCY = cfg.CONFIG["prune_cache_frequency"]  # minutes
 SLOT_NOTIFICATION_COOL_DOWN = cfg.CONFIG["slot_notification_cool_down"]  # hours
 
@@ -103,7 +106,7 @@ def reload_content(driver, url, date, sleep=0, reload_interval=10):
     # refresh the driver's URL
     _, _, query_count = driver.get(url), logger.debug(f"Querying {url}"), 1
 
-    while True:
+    while query_count <= CHROME_MAX_QUERY_ATTEMPTS:
         time.sleep(sleep)
         current = extract_site_contents(chrome_driver=driver)
 
@@ -117,12 +120,17 @@ def reload_content(driver, url, date, sleep=0, reload_interval=10):
         arr = current.find_all("input", attrs={"name": "selected_date"})  # arr = current.find_all("div", attrs={"class": "date"})
 
         # format dates and check they're equal
-        if not isinstance(arr, list) or len(arr) > 1:
-            logger.error(f"Expected an array of one element when targeting the page's time but instead received: {arr}")
-        else:
+        if isinstance(arr, list) and len(arr) == 1:
             if arr[0].get("value") == str(date):
                 logger.debug("Queried date equals HTML's date")
                 break
+            logger.debug(f"Expected date '{date}' but observed '{arr[0].get('value')}'")
+        elif isinstance(arr, list) and len(arr) == 0:
+            logger.warning("selected_date field missing from page; waiting for page to settle")
+        else:
+            logger.warning(
+                f"Expected one selected_date field but received {len(arr) if isinstance(arr, list) else 'non-list'}"
+            )
         logger.warning(f"Driver's web page yet to load, waiting {sleep} second(s): '{url}'")
 
         # after a certain number of attempts, re-load the URL
@@ -133,7 +141,28 @@ def reload_content(driver, url, date, sleep=0, reload_interval=10):
         # increment query count
         query_count += 1
 
+    if query_count > CHROME_MAX_QUERY_ATTEMPTS:
+        logger.warning(f"Timed out waiting for content date match at '{url}'")
+        return None
+
     return current
+
+
+def get_wait_time(default_wait_time):
+    """Use a faster polling interval during the midnight release window."""
+    boost = cfg.CONFIG.get("midnight_boost", {})
+    if not boost.get("enabled", True):
+        return default_wait_time
+
+    now = cfg.TIME_ZONE_MANAGER.now()
+    boost_hour = int(boost.get("hour", 0))
+    boost_minutes = int(boost.get("minutes", 20))
+    boosted_wait_time = int(boost.get("wait_time", 15))
+
+    if now.hour == boost_hour and 0 <= now.minute < boost_minutes:
+        return max(5, boosted_wait_time)
+
+    return default_wait_time
 
 
 def check_booking_system(cache, start, window, schedule, week="", message_box=False, text_message=False, email=False,
@@ -151,7 +180,7 @@ def check_booking_system(cache, start, window, schedule, week="", message_box=Fa
     for date in dates:
         day, url = date.strftime("%a"), BOOKING_WIDGET_URL.format(date=date.strftime(BOOKING_WIDGET_URL_DATE_FORMAT))
         logger.debug(f"Directing chrome driver instance to {url}")
-        content = reload_content(CHROME_DRIVER, url, date, sleep=3)
+        content = reload_content(CHROME_DRIVER, url, date, sleep=CHROME_PAGE_POLL_SLEEP)
         if not content:
             continue
         # get date permissible slots
@@ -221,8 +250,11 @@ def reload_chrome_driver(log_text="", close_existing=False):
 
     if USE_CHROME_DRIVER:
         logger.info(log_text or "Loading Chrome Driver")
-        if close_existing:
-            CHROME_DRIVER.quit()
+        if close_existing and CHROME_DRIVER is not None:
+            try:
+                CHROME_DRIVER.quit()
+            except Exception:
+                logger.warning("Existing Chrome Driver could not be closed cleanly", exc_info=True)
         CHROME_DRIVER = get_chrome_driver(
             url="", driver_path=cfg.CONFIG["chrome"]["driver"], sleep=0
         )
@@ -247,6 +279,7 @@ def main(wait_time=60, message_box=False, email=False, text_message=False):
 
     _, cycle_count = logger.info("Running tennis booking system continuously."), 0
     while True:
+        wait_time_current = get_wait_time(wait_time)
         try:
             # reload driver
             if cycle_count % cfg.CONFIG["chrome"]["reload_frequency"] == 0:
@@ -282,8 +315,8 @@ def main(wait_time=60, message_box=False, email=False, text_message=False):
             # system not running normally
             sys_down = True
 
-        logger.debug(f"Sleeping for {wait_time} second(s) before next search")
-        time.sleep(wait_time)
+        logger.debug(f"Sleeping for {wait_time_current} second(s) before next search")
+        time.sleep(wait_time_current)
 
         # if system down, reload Chrome Driver
         if sys_down:
