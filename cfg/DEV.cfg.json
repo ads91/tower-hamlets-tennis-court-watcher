@@ -5,7 +5,9 @@
     "browser": "/app/.apt/usr/bin/google-chrome",
     "driver": "/app/.chromedriver/bin/chromedriver",
     "sleep": 10,
-    "reload_frequency": 100
+    "reload_frequency": 100,
+    "page_poll_sleep": 0.5,
+    "max_query_attempts": 8
   },
   "cache_file": "cache.json",
   "runtime_args": {
@@ -13,6 +15,12 @@
     "email": true,
     "message_box": false,
     "text_message": false
+  },
+  "midnight_boost": {
+    "enabled": true,
+    "hour": 0,
+    "minutes": 25,
+    "wait_time": 15
   },
   "window": 9,
   "prune_cache_frequency": 15,
