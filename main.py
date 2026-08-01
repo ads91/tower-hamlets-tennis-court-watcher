@@ -44,7 +44,7 @@ POLLING_RANDOM = random.Random(POLLING_RANDOM_SEED)
 
 DIAGNOSTICS_CONFIG = cfg.CONFIG.get("diagnostics", {})
 DIAGNOSTICS_ENABLED = bool(DIAGNOSTICS_CONFIG.get("enabled", True))
-DIAGNOSTICS_DIR = DIAGNOSTICS_CONFIG.get("dir", "diagnostics")
+DIAGNOSTICS_DIR = DIAGNOSTICS_CONFIG.get("dir", ".diagnostics")
 
 PRUNE_CACHE_FREQUENCY = cfg.CONFIG["prune_cache_frequency"]  # minutes
 SLOT_NOTIFICATION_COOL_DOWN = cfg.CONFIG["slot_notification_cool_down"]  # hours

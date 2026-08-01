@@ -29,7 +29,7 @@
   },
   "diagnostics": {
     "enabled": true,
-    "dir": "diagnostics"
+    "dir": ".diagnostics"
   },
   "window": 9,
   "prune_cache_frequency": 15,

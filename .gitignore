@@ -196,3 +196,6 @@ fabric.properties
 
 # VSCode
 .vscode/
+
+# Runtime diagnostics artifacts
+.diagnostics/
