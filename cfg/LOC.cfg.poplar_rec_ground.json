@@ -25,6 +25,15 @@
     "minutes": 25,
     "wait_time": 15
   },
+  "polling": {
+    "randomize": true,
+    "jitter_ratio": 0.25,
+    "seed": 7
+  },
+  "diagnostics": {
+    "enabled": true,
+    "dir": "diagnostics"
+  },
   "window": 9,
   "prune_cache_frequency": 15,
   "slot_notification_cool_down": 12,

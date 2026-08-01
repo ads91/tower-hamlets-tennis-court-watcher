@@ -61,6 +61,42 @@ Navigate to the cloned repository (i.e. the directory this readme.md resides in)
 $ python main.py
 ```
 
+### Monitoring Reliability Features
+
+The monitor now includes three reliability improvements:
+
+- explicit Selenium page classification while waiting for each booking date page to settle
+- failure diagnostics (screenshot, HTML, metadata JSON) written on monitoring failures
+- configurable randomized polling intervals to reduce fixed polling patterns
+
+You can tune this behavior in the environment config JSON (for example `cfg/LOC.cfg.st_johns_park.json`):
+
+```json
+{
+  "polling": {
+    "randomize": true,
+    "jitter_ratio": 0.25,
+    "seed": 7
+  },
+  "diagnostics": {
+    "enabled": true,
+    "dir": "diagnostics"
+  }
+}
+```
+
+Polling notes:
+
+- with `randomize=true`, the monitor computes each cycle wait from a uniform range around the effective wait time
+- if `min_wait_seconds` and `max_wait_seconds` are set, those values override `jitter_ratio`
+- midnight boost still applies first, then randomization is applied to that boosted value
+
+Diagnostics notes:
+
+- each failure capture creates a timestamped directory under `diagnostics.dir`
+- captures include `screenshot.png`, `page.html`, and `metadata.json` when available
+- diagnostics paths are also included in error logs and system-down alert emails
+
 ## Advanced setup
 
 ### Configuring permissible slot notifications
