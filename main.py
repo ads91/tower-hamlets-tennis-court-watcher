@@ -238,7 +238,6 @@ def reload_content(driver, url, date, sleep=0, reload_interval=10):
             monitor_state=monitor_state.value,
             page_classification=page_classification.value,
             query_count=query_count,
-            expected_date=str(date),
             url=url,
             **details,
         )

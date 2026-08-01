@@ -61,6 +61,14 @@ Navigate to the cloned repository (i.e. the directory this readme.md resides in)
 $ python main.py
 ```
 
+### Running tests
+
+Run the regression suite from the repository root:
+
+```
+$ python -m unittest discover -s tests -v
+```
+
 ### Monitoring Reliability Features
 
 The monitor now includes three reliability improvements:
