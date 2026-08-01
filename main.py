@@ -1,5 +1,9 @@
 # /usr/local/bin/python3.8 ~/Documents/dev/other/main.py
 import os
+import socket
+import getpass
+import platform
+import uuid
 import time
 import logging
 import random
@@ -201,6 +205,32 @@ def send_email(booking_msg, body, recipients):
         logger.error("Email send error", exc_info=True)
 
 
+def get_email_source_footer():
+    host_name = socket.gethostname()
+    # fqdn = socket.getfqdn()
+    user_name = getpass.getuser()
+    machine = platform.machine()
+    system = platform.system()
+    release = platform.release()
+    # python_version = platform.python_version()
+    # machine_id = f"{uuid.getnode():012x}"
+    # app_environment = getattr(cfg, "ENV", os.environ.get("APP_ENVIRONMENT", "unknown"))
+    config_extras = os.environ.get("CONFIG_EXTRAS", "")
+    return (
+        "\n\n---\n"
+        "Source:\n"
+        f"host={host_name}\n"
+        # f"fqdn={fqdn}\n"
+        f"user={user_name}\n"
+        f"os={system} {release}\n"
+        f"arch={machine}\n"
+        # f"python={python_version}\n"
+        # f"machine_id={machine_id}\n"
+        # f"env={app_environment}\n"
+        f"config_extras={config_extras or 'NONE'}"
+    )
+
+
 def dispatch_alerts(msg, recipients, body="", message_box=False, text_message=False, email=False):
     # log the message
     logger.info(f"Email message is '{msg}'")
@@ -215,7 +245,8 @@ def dispatch_alerts(msg, recipients, body="", message_box=False, text_message=Fa
         TEXT_MESSAGE_CLIENT.messages.create(to=TEXT_MESSAGE_TO, from_=TEXT_MESSAGE_FROM, body=msg)
     # email available (and permissible) slot
     if email:
-        send_email(msg, body, recipients)
+        source_footer = get_email_source_footer()
+        send_email(msg, f"{body}{source_footer}" if body else source_footer.strip(), recipients)
 
 
 def reload_content(driver, url, date, sleep=0, reload_interval=10):
