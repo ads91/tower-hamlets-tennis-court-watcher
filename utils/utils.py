@@ -18,13 +18,15 @@ def get_chrome_driver(
         url="",
         driver_path="",
         sleep=0,
+        headless=True,
         chrome_version=150,
         init_retries=3,
         init_retry_sleep=2
 ):
     options = webdriver.ChromeOptions()
 
-    options.add_argument("--headless=new")
+    if headless:
+        options.add_argument("--headless=new")
 
     # Reduce automation fingerprints
     options.add_argument("--disable-blink-features=AutomationControlled")

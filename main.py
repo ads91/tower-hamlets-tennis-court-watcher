@@ -37,6 +37,24 @@ SCHEDULE = cfg.CONFIG["schedule"]  # number of days to look ahead (current date 
 
 CHROME_PAGE_POLL_SLEEP = float(cfg.CONFIG.get("chrome", {}).get("page_poll_sleep", 0.5))
 CHROME_MAX_QUERY_ATTEMPTS = int(cfg.CONFIG.get("chrome", {}).get("max_query_attempts", 8))
+CHROME_HEADLESS = bool(cfg.CONFIG.get("chrome", {}).get("headless", True))
+
+CHALLENGE_CONFIG = cfg.CONFIG.get("challenge", {})
+CHALLENGE_MANUAL_VERIFY_ENABLED = bool(CHALLENGE_CONFIG.get("manual_verify_enabled", True))
+CHALLENGE_VERIFY_TIMEOUT_SECONDS = int(CHALLENGE_CONFIG.get("verify_timeout_seconds", 180))
+CHALLENGE_VERIFY_POLL_SLEEP_SECONDS = float(CHALLENGE_CONFIG.get("verify_poll_sleep_seconds", 2))
+CHALLENGE_PAGE_MARKERS = [
+    str(marker).lower() for marker in CHALLENGE_CONFIG.get(
+        "page_markers",
+        [
+            "verify you are a human",
+            "captcha",
+            "cloudflare",
+            "are you human",
+            "security check",
+        ],
+    )
+]
 
 POLLING_CONFIG = cfg.CONFIG.get("polling", {})
 POLLING_RANDOMIZE = bool(POLLING_CONFIG.get("randomize", False))
@@ -94,6 +112,7 @@ EMAIL_SYS_ERROR_RECIPIENTS = EMAILS["sys_errors"]
 class PageClassification(Enum):
     DATE_MATCHED = "date_matched"
     CLOSED_FOR_BOOKING = "closed_for_booking"
+    CHALLENGE_PAGE = "challenge_page"
     DATE_MISMATCH = "date_mismatch"
     MISSING_SELECTED_DATE = "missing_selected_date"
     INVALID_SELECTED_DATE_COUNT = "invalid_selected_date_count"
@@ -120,6 +139,11 @@ def log_structured(event, level=logging.INFO, **payload):
 
 
 def classify_booking_page(content, expected_date):
+    page_text = content.get_text(" ", strip=True).lower()
+    for marker in CHALLENGE_PAGE_MARKERS:
+        if marker and marker in page_text:
+            return PageClassification.CHALLENGE_PAGE, {"marker": marker}
+
     closed_for_booking_check = content.find("p", attrs={"class": "closed"})
     if closed_for_booking_check:
         return PageClassification.CLOSED_FOR_BOOKING, {
@@ -249,6 +273,31 @@ def dispatch_alerts(msg, recipients, body="", message_box=False, text_message=Fa
         send_email(msg, f"{body}{source_footer}" if body else source_footer.strip(), recipients)
 
 
+def wait_for_manual_verification(driver, url, date):
+    """Allow a human to complete challenge verification in a visible browser window."""
+    deadline = time.time() + CHALLENGE_VERIFY_TIMEOUT_SECONDS
+    logger.warning(
+        f"Challenge page detected at {url}. Please complete verification in the browser within "
+        f"{CHALLENGE_VERIFY_TIMEOUT_SECONDS} second(s)."
+    )
+
+    while time.time() < deadline:
+        time.sleep(CHALLENGE_VERIFY_POLL_SLEEP_SECONDS)
+        current = extract_site_contents(chrome_driver=driver)
+        classification, details = classify_booking_page(current, date)
+        if classification != PageClassification.CHALLENGE_PAGE:
+            log_structured(
+                "challenge_page_cleared",
+                url=url,
+                page_classification=classification.value,
+                **details,
+            )
+            return current
+
+    logger.warning("Manual verification timed out")
+    return None
+
+
 def reload_content(driver, url, date, sleep=0, reload_interval=10):
     """ Wait indefinitely until the page refreshes, checking the page's implied date against
     a target date. """
@@ -277,6 +326,31 @@ def reload_content(driver, url, date, sleep=0, reload_interval=10):
             monitor_state = MonitorState.COMPLETED
             logger.debug("Queried date equals HTML's date")
             return current
+
+        if page_classification == PageClassification.CHALLENGE_PAGE:
+            logger.warning(
+                "Challenge page encountered. "
+                "If using headless mode, set chrome.headless to false for manual verification."
+            )
+            capture_failure_diagnostics(
+                driver,
+                context="challenge_page_detected",
+                extra={"url": url, "marker": details.get("marker", "")},
+            )
+
+            if CHALLENGE_MANUAL_VERIFY_ENABLED and not CHROME_HEADLESS:
+                manually_verified_content = wait_for_manual_verification(driver, url, date)
+                if manually_verified_content is not None:
+                    current = manually_verified_content
+                    page_classification, details = classify_booking_page(current, date)
+                    if page_classification == PageClassification.DATE_MATCHED:
+                        monitor_state = MonitorState.COMPLETED
+                        return current
+                    if page_classification == PageClassification.CLOSED_FOR_BOOKING:
+                        monitor_state = MonitorState.STOPPED_CLOSED
+                        return None
+                else:
+                    return None
 
         if page_classification == PageClassification.CLOSED_FOR_BOOKING:
             monitor_state = MonitorState.STOPPED_CLOSED
@@ -467,7 +541,7 @@ def reload_chrome_driver(log_text="", close_existing=False):
             except Exception:
                 logger.warning("Existing Chrome Driver could not be closed cleanly", exc_info=True)
         CHROME_DRIVER = get_chrome_driver(
-            url="", driver_path=cfg.CONFIG["chrome"]["driver"], sleep=0
+            url="", driver_path=cfg.CONFIG["chrome"]["driver"], sleep=0, headless=CHROME_HEADLESS
         )
 
 
