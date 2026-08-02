@@ -46,7 +46,8 @@ def load_file(item, io_type="os", prefix="", **kwargs):
     LOGGER.info(f"Loading [{prefix}]'{item}' of type '{file_type}' from '{io_type}'")
     if io_type == "os":
         if file_type == "json":
-            return json.load(open(os.path.join(prefix, item), "r"))
+            with open(os.path.join(prefix, item), "r", encoding="utf-8") as json_file:
+                return json.load(json_file)
     elif io_type == "url":
         if file_type == "json":
             return requests.get(prefix + item).json()
@@ -65,9 +66,11 @@ def save_file(item, data, io_type="os", prefix="", **kwargs):
     LOGGER.info(f"Saving [{prefix}]'{item}' of type '{file_type}' to '{io_type}'")
     if io_type == "os":
         if file_type == "*":
-            open(os.path.join(prefix, item), "w").write(data)
+            with open(os.path.join(prefix, item), "w", encoding="utf-8") as out_file:
+                out_file.write(data)
         elif file_type == "json":
-            json.dump(data, open(os.path.join(prefix, item), "w"))
+            with open(os.path.join(prefix, item), "w", encoding="utf-8") as json_file:
+                json.dump(data, json_file)
         else:
             saved = False
     elif io_type == "google_storage":

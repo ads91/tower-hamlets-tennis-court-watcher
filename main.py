@@ -1,10 +1,17 @@
 # /usr/local/bin/python3.8 ~/Documents/dev/other/main.py
 import os
+import socket
+import getpass
+import platform
+import uuid
 import time
 import logging
+import random
+import json
 import yagmail
 import datetime
 import traceback
+from enum import Enum
 
 import pandas as pd
 
@@ -30,6 +37,36 @@ SCHEDULE = cfg.CONFIG["schedule"]  # number of days to look ahead (current date 
 
 CHROME_PAGE_POLL_SLEEP = float(cfg.CONFIG.get("chrome", {}).get("page_poll_sleep", 0.5))
 CHROME_MAX_QUERY_ATTEMPTS = int(cfg.CONFIG.get("chrome", {}).get("max_query_attempts", 8))
+CHROME_HEADLESS = bool(cfg.CONFIG.get("chrome", {}).get("headless", True))
+
+CHALLENGE_CONFIG = cfg.CONFIG.get("challenge", {})
+CHALLENGE_MANUAL_VERIFY_ENABLED = bool(CHALLENGE_CONFIG.get("manual_verify_enabled", True))
+CHALLENGE_VERIFY_TIMEOUT_SECONDS = int(CHALLENGE_CONFIG.get("verify_timeout_seconds", 180))
+CHALLENGE_VERIFY_POLL_SLEEP_SECONDS = float(CHALLENGE_CONFIG.get("verify_poll_sleep_seconds", 2))
+CHALLENGE_PAGE_MARKERS = [
+    str(marker).lower() for marker in CHALLENGE_CONFIG.get(
+        "page_markers",
+        [
+            "verify you are a human",
+            "captcha",
+            "cloudflare",
+            "are you human",
+            "security check",
+        ],
+    )
+]
+
+POLLING_CONFIG = cfg.CONFIG.get("polling", {})
+POLLING_RANDOMIZE = bool(POLLING_CONFIG.get("randomize", False))
+POLLING_JITTER_RATIO = float(POLLING_CONFIG.get("jitter_ratio", 0.2))
+POLLING_MIN_WAIT_SECONDS = POLLING_CONFIG.get("min_wait_seconds")
+POLLING_MAX_WAIT_SECONDS = POLLING_CONFIG.get("max_wait_seconds")
+POLLING_RANDOM_SEED = POLLING_CONFIG.get("seed")
+POLLING_RANDOM = random.Random(POLLING_RANDOM_SEED)
+
+DIAGNOSTICS_CONFIG = cfg.CONFIG.get("diagnostics", {})
+DIAGNOSTICS_ENABLED = bool(DIAGNOSTICS_CONFIG.get("enabled", True))
+DIAGNOSTICS_DIR = DIAGNOSTICS_CONFIG.get("dir", ".diagnostics")
 
 PRUNE_CACHE_FREQUENCY = cfg.CONFIG["prune_cache_frequency"]  # minutes
 SLOT_NOTIFICATION_COOL_DOWN = cfg.CONFIG["slot_notification_cool_down"]  # hours
@@ -72,6 +109,115 @@ EMAIL_SLOT_AVAILABLE_RECIPIENTS = EMAILS["slot_available"]
 EMAIL_SYS_ERROR_RECIPIENTS = EMAILS["sys_errors"]
 
 
+class PageClassification(Enum):
+    DATE_MATCHED = "date_matched"
+    CLOSED_FOR_BOOKING = "closed_for_booking"
+    CHALLENGE_PAGE = "challenge_page"
+    DATE_MISMATCH = "date_mismatch"
+    MISSING_SELECTED_DATE = "missing_selected_date"
+    INVALID_SELECTED_DATE_COUNT = "invalid_selected_date_count"
+
+
+class MonitorState(Enum):
+    NAVIGATE = "navigate"
+    WAIT_FOR_SETTLE = "wait_for_settle"
+    FETCH_HTML = "fetch_html"
+    CLASSIFY_PAGE = "classify_page"
+    RELOAD_PAGE = "reload_page"
+    COMPLETED = "completed"
+    STOPPED_CLOSED = "stopped_closed"
+    STOPPED_TIMEOUT = "stopped_timeout"
+
+
+def log_structured(event, level=logging.INFO, **payload):
+    message = {
+        "event": event,
+        "timestamp": cfg.TIME_ZONE_MANAGER.now().isoformat(),
+        **payload,
+    }
+    logger.log(level, json.dumps(message, default=str, sort_keys=True))
+
+
+def classify_booking_page(content, expected_date):
+    page_text = content.get_text(" ", strip=True).lower()
+    for marker in CHALLENGE_PAGE_MARKERS:
+        if marker and marker in page_text:
+            return PageClassification.CHALLENGE_PAGE, {"marker": marker}
+
+    closed_for_booking_check = content.find("p", attrs={"class": "closed"})
+    if closed_for_booking_check:
+        return PageClassification.CLOSED_FOR_BOOKING, {
+            "reason": closed_for_booking_check.get_text(strip=True)
+        }
+
+    selected_date_fields = content.find_all("input", attrs={"name": "selected_date"})
+    if isinstance(selected_date_fields, list) and len(selected_date_fields) == 1:
+        observed_date = selected_date_fields[0].get("value")
+        if observed_date == str(expected_date):
+            return PageClassification.DATE_MATCHED, {"observed_date": observed_date}
+        return PageClassification.DATE_MISMATCH, {
+            "observed_date": observed_date,
+            "expected_date": str(expected_date),
+        }
+
+    if isinstance(selected_date_fields, list) and len(selected_date_fields) == 0:
+        return PageClassification.MISSING_SELECTED_DATE, {}
+
+    return PageClassification.INVALID_SELECTED_DATE_COUNT, {
+        "selected_date_count": len(selected_date_fields) if isinstance(selected_date_fields, list) else "non-list"
+    }
+
+
+def capture_failure_diagnostics(driver, context, exception=None, extra=None):
+    if not DIAGNOSTICS_ENABLED:
+        return {}
+
+    timestamp = cfg.TIME_ZONE_MANAGER.now().strftime("%Y%m%d-%H%M%S")
+    destination = os.path.join(DIAGNOSTICS_DIR, f"{timestamp}-{context}")
+    os.makedirs(destination, exist_ok=True)
+
+    output = {}
+    if driver is not None:
+        screenshot_path = os.path.join(destination, "screenshot.png")
+        html_path = os.path.join(destination, "page.html")
+
+        try:
+            if driver.save_screenshot(screenshot_path):
+                output["screenshot"] = screenshot_path
+        except Exception:
+            logger.warning("Failed to capture diagnostics screenshot", exc_info=True)
+
+        try:
+            with open(html_path, "w", encoding="utf-8") as page_file:
+                page_file.write(driver.page_source)
+            output["html"] = html_path
+        except Exception:
+            logger.warning("Failed to capture diagnostics HTML", exc_info=True)
+
+    metadata_path = os.path.join(destination, "metadata.json")
+    metadata = {
+        "context": context,
+        "timestamp": cfg.TIME_ZONE_MANAGER.now().isoformat(),
+        "current_url": getattr(driver, "current_url", ""),
+        "extra": extra or {},
+    }
+    if exception is not None:
+        metadata["exception"] = {
+            "type": type(exception).__name__,
+            "message": str(exception),
+            "traceback": "".join(traceback.format_exception(type(exception), exception, exception.__traceback__)),
+        }
+
+    try:
+        with open(metadata_path, "w", encoding="utf-8") as metadata_file:
+            json.dump(metadata, metadata_file, indent=2, sort_keys=True)
+        output["metadata"] = metadata_path
+    except Exception:
+        logger.warning("Failed to capture diagnostics metadata", exc_info=True)
+
+    return output
+
+
 def send_email(booking_msg, body, recipients):
     """ Send an email about an available slot to book. """
     try:
@@ -81,6 +227,32 @@ def send_email(booking_msg, body, recipients):
         logger.info("Email sent successfully")
     except Exception as _:
         logger.error("Email send error", exc_info=True)
+
+
+def get_email_source_footer():
+    host_name = socket.gethostname()
+    # fqdn = socket.getfqdn()
+    user_name = getpass.getuser()
+    machine = platform.machine()
+    system = platform.system()
+    release = platform.release()
+    # python_version = platform.python_version()
+    # machine_id = f"{uuid.getnode():012x}"
+    # app_environment = getattr(cfg, "ENV", os.environ.get("APP_ENVIRONMENT", "unknown"))
+    config_extras = os.environ.get("CONFIG_EXTRAS", "")
+    return (
+        "\n\n---\n"
+        "Source:\n"
+        f"host={host_name}\n"
+        # f"fqdn={fqdn}\n"
+        f"user={user_name}\n"
+        f"os={system} {release}\n"
+        f"arch={machine}\n"
+        # f"python={python_version}\n"
+        # f"machine_id={machine_id}\n"
+        # f"env={app_environment}\n"
+        f"config_extras={config_extras or 'NONE'}"
+    )
 
 
 def dispatch_alerts(msg, recipients, body="", message_box=False, text_message=False, email=False):
@@ -97,44 +269,111 @@ def dispatch_alerts(msg, recipients, body="", message_box=False, text_message=Fa
         TEXT_MESSAGE_CLIENT.messages.create(to=TEXT_MESSAGE_TO, from_=TEXT_MESSAGE_FROM, body=msg)
     # email available (and permissible) slot
     if email:
-        send_email(msg, body, recipients)
+        source_footer = get_email_source_footer()
+        send_email(msg, f"{body}{source_footer}" if body else source_footer.strip(), recipients)
+
+
+def wait_for_manual_verification(driver, url, date):
+    """Allow a human to complete challenge verification in a visible browser window."""
+    deadline = time.time() + CHALLENGE_VERIFY_TIMEOUT_SECONDS
+    logger.warning(
+        f"Challenge page detected at {url}. Please complete verification in the browser within "
+        f"{CHALLENGE_VERIFY_TIMEOUT_SECONDS} second(s)."
+    )
+
+    while time.time() < deadline:
+        time.sleep(CHALLENGE_VERIFY_POLL_SLEEP_SECONDS)
+        current = extract_site_contents(chrome_driver=driver)
+        classification, details = classify_booking_page(current, date)
+        if classification != PageClassification.CHALLENGE_PAGE:
+            log_structured(
+                "challenge_page_cleared",
+                url=url,
+                page_classification=classification.value,
+                **details,
+            )
+            return current
+
+    logger.warning("Manual verification timed out")
+    return None
 
 
 def reload_content(driver, url, date, sleep=0, reload_interval=10):
     """ Wait indefinitely until the page refreshes, checking the page's implied date against
     a target date. """
-    # refresh the driver's URL
+    monitor_state = MonitorState.NAVIGATE
     _, _, query_count = driver.get(url), logger.debug(f"Querying {url}"), 1
 
     while query_count <= CHROME_MAX_QUERY_ATTEMPTS:
+        monitor_state = MonitorState.WAIT_FOR_SETTLE
         time.sleep(sleep)
+
+        monitor_state = MonitorState.FETCH_HTML
         current = extract_site_contents(chrome_driver=driver)
 
-        # check to see if courts are even available to book for this date
-        closed_for_booking_check = current.find("p", attrs={"class": "closed"})
-        if closed_for_booking_check:
-            logger.debug(closed_for_booking_check.string)
+        monitor_state = MonitorState.CLASSIFY_PAGE
+        page_classification, details = classify_booking_page(current, date)
+        log_structured(
+            "booking_page_classified",
+            monitor_state=monitor_state.value,
+            page_classification=page_classification.value,
+            query_count=query_count,
+            url=url,
+            **details,
+        )
+
+        if page_classification == PageClassification.DATE_MATCHED:
+            monitor_state = MonitorState.COMPLETED
+            logger.debug("Queried date equals HTML's date")
+            return current
+
+        if page_classification == PageClassification.CHALLENGE_PAGE:
+            logger.warning(
+                "Challenge page encountered. "
+                "If using headless mode, set chrome.headless to false for manual verification."
+            )
+            capture_failure_diagnostics(
+                driver,
+                context="challenge_page_detected",
+                extra={"url": url, "marker": details.get("marker", "")},
+            )
+
+            if CHALLENGE_MANUAL_VERIFY_ENABLED and not CHROME_HEADLESS:
+                manually_verified_content = wait_for_manual_verification(driver, url, date)
+                if manually_verified_content is not None:
+                    current = manually_verified_content
+                    page_classification, details = classify_booking_page(current, date)
+                    if page_classification == PageClassification.DATE_MATCHED:
+                        monitor_state = MonitorState.COMPLETED
+                        return current
+                    if page_classification == PageClassification.CLOSED_FOR_BOOKING:
+                        monitor_state = MonitorState.STOPPED_CLOSED
+                        return None
+                else:
+                    return None
+
+        if page_classification == PageClassification.CLOSED_FOR_BOOKING:
+            monitor_state = MonitorState.STOPPED_CLOSED
+            logger.debug(details.get("reason", "Date is closed for booking"))
             return None
 
-        # extract expected date location from HTML
-        arr = current.find_all("input", attrs={"name": "selected_date"})  # arr = current.find_all("div", attrs={"class": "date"})
-
-        # format dates and check they're equal
-        if isinstance(arr, list) and len(arr) == 1:
-            if arr[0].get("value") == str(date):
-                logger.debug("Queried date equals HTML's date")
-                break
-            logger.debug(f"Expected date '{date}' but observed '{arr[0].get('value')}'")
-        elif isinstance(arr, list) and len(arr) == 0:
-            logger.warning("selected_date field missing from page; waiting for page to settle")
-        else:
-            logger.warning(
-                f"Expected one selected_date field but received {len(arr) if isinstance(arr, list) else 'non-list'}"
+        if page_classification == PageClassification.DATE_MISMATCH:
+            logger.debug(
+                f"Expected date '{details.get('expected_date')}' but observed '{details.get('observed_date')}'"
             )
+        elif page_classification == PageClassification.MISSING_SELECTED_DATE:
+            logger.warning("selected_date field missing from page; waiting for page to settle")
+        elif page_classification == PageClassification.INVALID_SELECTED_DATE_COUNT:
+            logger.warning(
+                "Expected one selected_date field but received "
+                f"{details.get('selected_date_count', 'non-list')}"
+            )
+
         logger.warning(f"Driver's web page yet to load, waiting {sleep} second(s): '{url}'")
 
         # after a certain number of attempts, re-load the URL
         if query_count % reload_interval == 0:
+            monitor_state = MonitorState.RELOAD_PAGE
             logger.warning(f"Queried HTML {query_count} times, re-loading URL: '{url}'")
             driver.get(url)
 
@@ -142,10 +381,27 @@ def reload_content(driver, url, date, sleep=0, reload_interval=10):
         query_count += 1
 
     if query_count > CHROME_MAX_QUERY_ATTEMPTS:
+        monitor_state = MonitorState.STOPPED_TIMEOUT
         logger.warning(f"Timed out waiting for content date match at '{url}'")
+        diagnostics = capture_failure_diagnostics(
+            driver,
+            context="reload_content_timeout",
+            extra={
+                "state": monitor_state.value,
+                "url": url,
+                "expected_date": str(date),
+                "max_attempts": CHROME_MAX_QUERY_ATTEMPTS,
+            },
+        )
+        if diagnostics:
+            log_structured(
+                "reload_content_diagnostics_captured",
+                level=logging.WARNING,
+                diagnostics=diagnostics,
+                url=url,
+                expected_date=str(date),
+            )
         return None
-
-    return current
 
 
 def get_wait_time(default_wait_time):
@@ -163,6 +419,35 @@ def get_wait_time(default_wait_time):
         return max(5, boosted_wait_time)
 
     return default_wait_time
+
+
+def get_wait_interval(default_wait_time):
+    """Select the next polling wait interval using optional randomization settings."""
+    base_wait = float(get_wait_time(default_wait_time))
+
+    if not POLLING_RANDOMIZE:
+        return base_wait
+
+    min_wait_seconds = POLLING_MIN_WAIT_SECONDS
+    max_wait_seconds = POLLING_MAX_WAIT_SECONDS
+
+    if min_wait_seconds is None or max_wait_seconds is None:
+        min_wait_seconds = max(1.0, base_wait * (1 - POLLING_JITTER_RATIO))
+        max_wait_seconds = max(min_wait_seconds, base_wait * (1 + POLLING_JITTER_RATIO))
+    else:
+        min_wait_seconds = float(min_wait_seconds)
+        max_wait_seconds = max(min_wait_seconds, float(max_wait_seconds))
+
+    wait_seconds = POLLING_RANDOM.uniform(min_wait_seconds, max_wait_seconds)
+    log_structured(
+        "polling_interval_selected",
+        randomized=True,
+        base_wait=base_wait,
+        wait_seconds=round(wait_seconds, 3),
+        min_wait_seconds=round(min_wait_seconds, 3),
+        max_wait_seconds=round(max_wait_seconds, 3),
+    )
+    return wait_seconds
 
 
 def check_booking_system(cache, start, window, schedule, week="", message_box=False, text_message=False, email=False,
@@ -256,7 +541,7 @@ def reload_chrome_driver(log_text="", close_existing=False):
             except Exception:
                 logger.warning("Existing Chrome Driver could not be closed cleanly", exc_info=True)
         CHROME_DRIVER = get_chrome_driver(
-            url="", driver_path=cfg.CONFIG["chrome"]["driver"], sleep=0
+            url="", driver_path=cfg.CONFIG["chrome"]["driver"], sleep=0, headless=CHROME_HEADLESS
         )
 
 
@@ -279,7 +564,7 @@ def main(wait_time=60, message_box=False, email=False, text_message=False):
 
     _, cycle_count = logger.info("Running tennis booking system continuously."), 0
     while True:
-        wait_time_current = get_wait_time(wait_time)
+        log_structured("monitor_cycle_started", cycle_count=cycle_count)
         try:
             # reload driver
             if cycle_count % cfg.CONFIG["chrome"]["reload_frequency"] == 0:
@@ -301,22 +586,41 @@ def main(wait_time=60, message_box=False, email=False, text_message=False):
             # system running normally
             sys_down, cycle_count = False, cycle_count+1
         except Exception as ex:
+            diagnostics = capture_failure_diagnostics(
+                CHROME_DRIVER,
+                context="monitor_cycle_failure",
+                exception=ex,
+                extra={"cycle_count": cycle_count},
+            )
+            diagnostics_text = ""
+            if diagnostics:
+                diagnostics_lines = [f"- {k}: {v}" for k, v in diagnostics.items()]
+                diagnostics_text = "\n\nDiagnostics:\n" + "\n".join(diagnostics_lines)
+
             if not sys_down:
                 logger.exception(ex)
+                log_structured(
+                    "monitor_cycle_failed",
+                    level=logging.ERROR,
+                    cycle_count=cycle_count,
+                    diagnostics=diagnostics,
+                    error=str(ex),
+                )
                 # send message
                 dispatch_alerts(
                     BOOKING_SYSTEM_DOWN_MESSAGE, recipients=EMAIL_SYS_ERROR_RECIPIENTS, message_box=message_box,
                     text_message=text_message, email=email, body="\n".join(
                         traceback.format_exception(type(ex), ex, ex.__traceback__)
-                    )
+                    ) + diagnostics_text
                 )
             else:
                 logger.warning("Booking system is down", exc_info=True)
             # system not running normally
             sys_down = True
 
-        logger.debug(f"Sleeping for {wait_time_current} second(s) before next search")
-        time.sleep(wait_time_current)
+        wait_interval = get_wait_interval(wait_time)
+        logger.debug(f"Sleeping for {wait_interval} second(s) before next search")
+        time.sleep(wait_interval)
 
         # if system down, reload Chrome Driver
         if sys_down:
