@@ -7,7 +7,7 @@
   "chrome": {
     "browser": "",
     "driver": "",
-    "headless": false,
+    "headless": true,
     "sleep": 10,
     "reload_frequency": 100,
     "page_poll_sleep": 0.5,
