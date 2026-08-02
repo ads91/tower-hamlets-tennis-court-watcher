@@ -1,6 +1,7 @@
 #!/bin/bash
 # export CONFIG_EXTRAS=".st_johns_park" && sh /Users/andrewsanderson/Documents/dev/tower-hamlets-tennis-court-watcher/main.sh
 # export CONFIG_EXTRAS=".poplar_rec_ground" && sh /Users/andrewsanderson/Documents/dev/tower-hamlets-tennis-court-watcher/main.sh
+# export CONFIG_EXTRAS=".king_edward_memorial_park" && sh /Users/andrewsanderson/Documents/dev/tower-hamlets-tennis-court-watcher/main.sh
 
 PROJECT_DIR="/Users/andrewsanderson/Documents/dev/tower-hamlets-tennis-court-watcher"
 cd "$PROJECT_DIR" || exit 1

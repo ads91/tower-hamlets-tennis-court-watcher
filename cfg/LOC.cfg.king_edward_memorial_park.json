@@ -1,0 +1,91 @@
+{
+  "venue": "king-edward-memorial-park",
+  "auth_config_path": "auth.json",
+  "emails_config_path": "emails.king_edward_memorial_park.json",
+  "timezone": "Europe/London",
+  "timezone_hour_offset": 1,
+  "chrome": {
+    "browser": "",
+    "driver": "",
+    "sleep": 10,
+    "reload_frequency": 100,
+    "page_poll_sleep": 0.5,
+    "max_query_attempts": 8
+  },
+  "cache_file": "LOC.cache.king_edward_memorial_park.json",
+  "runtime_args": {
+    "wait_time": 60,
+    "email": true,
+    "message_box": false,
+    "text_message": false
+  },
+  "midnight_boost": {
+    "enabled": true,
+    "hour": 0,
+    "minutes": 25,
+    "wait_time": 15
+  },
+  "polling": {
+    "randomize": true,
+    "jitter_ratio": 0.25,
+    "seed": 7
+  },
+  "diagnostics": {
+    "enabled": true,
+    "dir": ".diagnostics"
+  },
+  "window": 9,
+  "prune_cache_frequency": 15,
+  "slot_notification_cool_down": 12,
+  "schedule": {
+    "Mon": [
+      18,
+      19,
+      20
+    ],
+    "Tue": [
+      18,
+      19,
+      20
+    ],
+    "Wed": [
+      18,
+      19,
+      20
+    ],
+    "Thu": [
+      18,
+      19,
+      20
+    ],
+    "Fri": [
+      18,
+      19,
+      20
+    ],
+    "Sat": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ],
+    "Sun": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ]
+  }
+}
