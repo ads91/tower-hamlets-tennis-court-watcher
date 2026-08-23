@@ -19,6 +19,8 @@ def get_chrome_driver(
         driver_path="",
         sleep=0,
         headless=True,
+    user_data_dir="",
+    profile_directory="",
         chrome_version=150,
         init_retries=3,
         init_retry_sleep=2
@@ -36,6 +38,11 @@ def get_chrome_driver(
     options.add_argument("--start-maximized")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
+
+    if user_data_dir:
+        options.add_argument(f"--user-data-dir={user_data_dir}")
+    if profile_directory:
+        options.add_argument(f"--profile-directory={profile_directory}")
 
     # Realistic browser fingerprint
     options.add_argument(

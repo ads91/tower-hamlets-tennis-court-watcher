@@ -10,7 +10,10 @@
     "sleep": 10,
     "reload_frequency": 100,
     "page_poll_sleep": 0.5,
-    "max_query_attempts": 8
+    "max_query_attempts": 8,
+    "headless": false,
+    "user_data_dir": ".chrome_profile",
+    "profile_directory": "Default"
   },
   "cache_file": "LOC.cache.st_johns_park.json",
   "runtime_args": {
@@ -33,6 +36,18 @@
   "diagnostics": {
     "enabled": true,
     "dir": ".diagnostics"
+  },
+  "challenge": {
+    "manual_verify_enabled": true,
+    "verify_timeout_seconds": 240,
+    "verify_poll_sleep_seconds": 2,
+    "page_markers": [
+      "verify you are a human",
+      "just checking",
+      "captcha",
+      "cloudflare",
+      "security check"
+    ]
   },
   "window": 9,
   "prune_cache_frequency": 15,

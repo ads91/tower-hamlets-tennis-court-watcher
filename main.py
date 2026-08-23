@@ -38,6 +38,8 @@ SCHEDULE = cfg.CONFIG["schedule"]  # number of days to look ahead (current date 
 CHROME_PAGE_POLL_SLEEP = float(cfg.CONFIG.get("chrome", {}).get("page_poll_sleep", 0.5))
 CHROME_MAX_QUERY_ATTEMPTS = int(cfg.CONFIG.get("chrome", {}).get("max_query_attempts", 8))
 CHROME_HEADLESS = bool(cfg.CONFIG.get("chrome", {}).get("headless", True))
+CHROME_USER_DATA_DIR = str(cfg.CONFIG.get("chrome", {}).get("user_data_dir", "")).strip()
+CHROME_PROFILE_DIRECTORY = str(cfg.CONFIG.get("chrome", {}).get("profile_directory", "")).strip()
 
 CHALLENGE_CONFIG = cfg.CONFIG.get("challenge", {})
 CHALLENGE_MANUAL_VERIFY_ENABLED = bool(CHALLENGE_CONFIG.get("manual_verify_enabled", True))
@@ -541,7 +543,12 @@ def reload_chrome_driver(log_text="", close_existing=False):
             except Exception:
                 logger.warning("Existing Chrome Driver could not be closed cleanly", exc_info=True)
         CHROME_DRIVER = get_chrome_driver(
-            url="", driver_path=cfg.CONFIG["chrome"]["driver"], sleep=0, headless=CHROME_HEADLESS
+            url="",
+            driver_path=cfg.CONFIG["chrome"]["driver"],
+            sleep=0,
+            headless=CHROME_HEADLESS,
+            user_data_dir=CHROME_USER_DATA_DIR,
+            profile_directory=CHROME_PROFILE_DIRECTORY,
         )
 
 
